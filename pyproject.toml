@@ -12,7 +12,8 @@ dependencies = [
     "psycopg-binary==3.2.4",
     "pyarrow==19.0.0",
     "requests==2.32.3",
-    "numpy==2.2.2"
+    "numpy==2.2.2",
+    "dagster_aws==0.25.10"
 ]
 
 [build-system]
