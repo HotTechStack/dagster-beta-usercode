@@ -10,7 +10,7 @@ on:
     branches: [ main ]
 
 env:
-  DOCKER_IMAGE: your-dockerhub-username/my-dagster-project # Replace with your image name
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/dagster-beta-usercode
 
 jobs:
   build-and-push:
