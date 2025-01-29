@@ -8,12 +8,14 @@ on:
         required: true
         default: 'latest'
   push:
-    branches:
-      - main
+    branches: [ main ]
+    tags: [ 'v*' ]
     paths:
       - 'hts_dagster_sample/**'
       - 'Dockerfile'
       - 'pyproject.toml'
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
