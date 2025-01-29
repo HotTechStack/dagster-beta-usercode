@@ -38,14 +38,35 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Debug step to verify workflow triggering
+      # Enhanced debug information
       - name: Debug Info
         run: |
+          echo "==== Build Context ===="
           echo "Event name: ${{ github.event_name }}"
           echo "Branch name: ${{ github.ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Workflow: ${{ github.workflow }}"
+          
+          echo "==== Repository Info ===="
+          echo "Repository: ${{ github.repository }}"
+          echo "Default branch: ${{ github.event.repository.default_branch }}"
+          
+          echo "==== Commit Info ===="
           echo "Commit message: ${{ github.event.head_commit.message }}"
-          echo "Changed files:"
-          git diff --name-only ${{ github.event.before }} ${{ github.event.after }}
+          echo "Committed by: ${{ github.event.head_commit.author.name }}"
+          
+          echo "==== Changed Files ===="
+          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
+            git diff --name-only HEAD^1 HEAD
+          else
+            echo "First commit or shallow clone - listing all files:"
+            git ls-files
+          fi
+          
+          echo "==== Environment ===="
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "Current directory: $(pwd)"
+          ls -la
 
       - name: Set image tag
         run: |
