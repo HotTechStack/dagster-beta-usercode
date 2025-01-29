@@ -1,70 +1,76 @@
-# .github/workflows/docker-build-push.yml
-
-name: Build and Push Docker Image
+name: Build and Push Dagster Docker Image
 
 on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag (e.g., v1.0.0)'
+        required: true
+        default: 'latest'
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  REGISTRY: docker.io
-  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/dagster-beta-usercode
+    branches:
+      - main
+    paths:
+      - 'hts_dagster_sample/**'
+      - 'Dockerfile'
+      - 'pyproject.toml'
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
+      # Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v2
 
-      - name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+      # Step 3: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
+      # Step 4: Set image tag
+      - name: Set image tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+          fi
 
-      - name: Build and push
+      # Step 5: Display build info
+      - name: Display build information
+        run: |
+          echo "Building image with tag: $IMAGE_TAG"
+          echo "Context directory: ."
+          echo "Dockerfile path: ./Dockerfile"
+
+      # Step 6: Build and push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/dagster-beta-usercode:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/dagster-beta-usercode:latest
 
-# How to use:
-# 1. Go to your GitHub repository settings
-# 2. Navigate to Secrets and Variables > Actions
-# 3. Add these secrets:
-#    - DOCKERHUB_USERNAME: Your DockerHub username
-#    - DOCKERHUB_TOKEN: Your DockerHub access token (not your password)
-#
-# Tag formats that will be created:
-# - For branches: your-username/my-dagster-project:branch-name
-# - For PRs: your-username/my-dagster-project:pr-number
-# - For tags: your-username/my-dagster-project:1.0.0
-# - For main branch: your-username/my-dagster-project:latest
-# - For commits: your-username/my-dagster-project:sha-xxxxx
+      # Step 7: Update Kubernetes deployment (if needed)
+      - name: Update Kubernetes deployment
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "New image has been pushed: ${{ secrets.DOCKER_USERNAME }}/dagster-usercode:${{ env.IMAGE_TAG }}"
+          echo "To update your Dagster deployment, run:"
+          echo "kubectl patch userdeployment my-dagster-project --type=json -p='[{\"op\": \"replace\", \"path\": \"/spec/deployment/image/tag\", \"value\": \"${{ env.IMAGE_TAG }}\"}]'"
+
+      # Step 8: Image digest
+      - name: Image digest
+        run: echo ${{ steps.build.outputs.digest }}
