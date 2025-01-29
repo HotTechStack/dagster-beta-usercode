@@ -35,7 +35,7 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Debug step to verify workflow triggering
@@ -63,14 +63,14 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/dagster-usercode:${{ env.IMAGE_TAG }}
-            ${{ secrets.DOCKER_USERNAME }}/dagster-usercode:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/dagster-usercode:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/dagster-usercode:latest
 
       # Step 7: Update Kubernetes deployment (if needed)
       - name: Update Kubernetes deployment
         if: github.event_name == 'workflow_dispatch'
         run: |
-          echo "New image has been pushed: ${{ secrets.DOCKER_USERNAME }}/dagster-usercode:${{ env.IMAGE_TAG }}"
+          echo "New image has been pushed: ${{ secrets.DOCKERHUB_USERNAME }}/dagster-usercode:${{ env.IMAGE_TAG }}"
           echo "To update your Dagster deployment, run:"
           echo "kubectl patch userdeployment my-dagster-project --type=json -p='[{\"op\": \"replace\", \"path\": \"/spec/deployment/image/tag\", \"value\": \"${{ env.IMAGE_TAG }}\"}]'"
 
