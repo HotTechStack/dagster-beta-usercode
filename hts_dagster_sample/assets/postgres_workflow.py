@@ -13,10 +13,10 @@ def generate_users():
     return df
 
 
-@asset
-def update_user_database(generate_users, postgres_db):
+@asset(required_resource_keys={"postgres"})  # Declare postgres as required resource
+def update_user_database(context, generate_users):  # Add context, remove postgres_db parameter
     """Update PostgreSQL database with user data"""
-    with postgres_db.get_connection() as conn:
+    with context.resources.postgres.get_connection() as conn:  # Use postgres through context
         # Create table if not exists
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS users (
