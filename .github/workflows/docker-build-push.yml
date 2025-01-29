@@ -8,14 +8,15 @@ on:
         required: true
         default: 'latest'
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
+    branches:
+      - main
     paths:
-      - 'hts_dagster_sample/**'
-      - 'Dockerfile'
-      - 'pyproject.toml'
-  pull_request:
-    branches: [ main ]
+      - '**/*.py'                  # Any Python file changes
+      - '**/*.toml'               # Any TOML file changes
+      - 'Dockerfile'              # Dockerfile changes
+      - '.github/workflows/*.yml'  # Workflow file changes
+      - 'requirements.txt'        # If you have requirements.txt
+      - 'README.md'              # README changes
 
 jobs:
   build:
@@ -37,7 +38,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 4: Set image tag
+      # Debug step to verify workflow triggering
+      - name: Debug Info
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Branch name: ${{ github.ref }}"
+          echo "Commit message: ${{ github.event.head_commit.message }}"
+          echo "Changed files:"
+          git diff --name-only ${{ github.event.before }} ${{ github.event.after }}
+
       - name: Set image tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -46,14 +55,6 @@ jobs:
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
           fi
 
-      # Step 5: Display build info
-      - name: Display build information
-        run: |
-          echo "Building image with tag: $IMAGE_TAG"
-          echo "Context directory: ."
-          echo "Dockerfile path: ./Dockerfile"
-
-      # Step 6: Build and push Docker image
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -62,8 +63,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/dagster-beta-usercode:${{ env.IMAGE_TAG }}
-            ${{ secrets.DOCKER_USERNAME }}/dagster-beta-usercode:latest
+            ${{ secrets.DOCKER_USERNAME }}/dagster-usercode:${{ env.IMAGE_TAG }}
+            ${{ secrets.DOCKER_USERNAME }}/dagster-usercode:latest
 
       # Step 7: Update Kubernetes deployment (if needed)
       - name: Update Kubernetes deployment
