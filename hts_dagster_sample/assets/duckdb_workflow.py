@@ -13,10 +13,10 @@ def create_analytics_data():
     return df
 
 
-@asset
-def run_duckdb_analysis(create_analytics_data, duckdb_db):
+@asset(required_resource_keys={"duckdb_db"})  # Declare the required resource
+def run_duckdb_analysis(context, create_analytics_data):  # Use context to access resource
     """Perform DuckDB analysis"""
-    db = duckdb_db
+    db = context.resources.duckdb_db  # Access the resource through context
 
     # Register DataFrame as table
     db.register('analytics_data', create_analytics_data)
